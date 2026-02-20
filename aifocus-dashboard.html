@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Refined AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+/* ══════════════════════════════════════════
+   DESIGN TOKENS
+══════════════════════════════════════════ */
+:root {
+  --bg:         #F9FAFB;
+  --white:      #FFFFFF;
+  --border:     #E5E7EB;
+  --text:       #111827;
+  --sub:        #374151;
+  --muted:      #6B7280;
+  --light:      #9CA3AF;
+  --accent:     #2563EB;
+  --accent-bg:  #EFF6FF;
+  --accent-mid: #BFDBFE;
+  --green:      #10B981;
+  --radius:     12px;
+  --sidebar-w:  196px;
+  --right-w:    228px;
+  --font-ui:    'Instrument Sans', -apple-system, sans-serif;
+  --font-body:  'Plus Jakarta Sans', -apple-system, sans-serif;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ══════════════════════════════════════════
+   SKELETON
+══════════════════════════════════════════ */
+@keyframes shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position:  600px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+  background-size: 600px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: 6px;
+}
+.sk-card {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 22px 24px; margin-bottom: 12px;
+}
+.sk-badge { height: 18px; width: 110px; border-radius: 20px; margin-bottom: 12px; }
+.sk-title { height: 20px; width: 72%; margin-bottom: 14px; }
+.sk-body  { height: 11px; margin-bottom: 8px; }
+.sk-body.w80 { width: 80%; }
+.sk-body.w60 { width: 60%; }
+
+/* ══════════════════════════════════════════
+   LEFT SIDEBAR
+══════════════════════════════════════════ */
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--white);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  padding: 20px 0; flex-shrink: 0;
+}
+
+/* 로고 */
+.logo {
+  display: flex; align-items: center; gap: 9px;
+  padding: 0 16px 24px;
+}
+.logo-icon {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, #2563EB, #7C3AED);
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.logo-icon svg { width: 16px; height: 16px; }
+.logo-name { font-family: var(--font-ui); font-size: 13.5px; font-weight: 700; color: var(--text); }
+.logo-sub  { font-size: 10px; color: var(--muted); margin-top: 1px; }
+
+/* 사이드바 섹션 라벨 */
+.sidebar-section-label {
+  font-family: var(--font-ui); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.9px; text-transform: uppercase;
+  color: var(--light); padding: 0 16px 8px;
+}
+
+/* ── Latest Update 버튼 ── */
+.update-btn-wrap { padding: 0 14px 20px; }
+
+.update-btn {
+  width: 100%;
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+.update-btn:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 12px rgba(37,99,235,0.10);
+}
+.update-btn:active { background: var(--accent-bg); }
+.update-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+
+.update-btn-top {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 6px;
+}
+.update-btn-label {
+  font-family: var(--font-ui); font-size: 11px; font-weight: 700;
+  color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px;
+  display: flex; align-items: center; gap: 5px;
+}
+.update-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green); flex-shrink: 0;
+}
+.update-dot.loading {
+  background: #F59E0B;
+  animation: pulse 0.8s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+.update-refresh-icon {
+  color: var(--muted); transition: transform 0.4s;
+  display: flex; align-items: center;
+}
+.update-btn.spinning .update-refresh-icon svg {
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.update-time-label {
+  font-family: var(--font-ui); font-size: 10px; color: var(--muted);
+  display: block; margin-bottom: 2px;
+}
+.update-time-value {
+  font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+  color: var(--text); display: block;
+}
+.update-status-msg {
+  font-family: var(--font-ui); font-size: 10.5px; color: var(--muted);
+  margin-top: 6px; line-height: 1.4;
+  min-height: 14px;
+}
+
+/* 구분선 */
+.sidebar-divider { height: 1px; background: var(--border); margin: 0 16px 16px; }
+
+/* 카테고리 필터 (사이드바 내) */
+.sidebar-cat-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 16px; font-size: 13px; font-weight: 500;
+  color: var(--muted); cursor: pointer; font-family: var(--font-ui);
+  transition: background 0.15s, color 0.15s;
+  position: relative; user-select: none; border-radius: 0;
+}
+.sidebar-cat-item:hover { background: var(--bg); color: var(--text); }
+.sidebar-cat-item.active {
+  color: var(--accent); background: var(--accent-bg); font-weight: 600;
+}
+.sidebar-cat-item.active::before {
+  content: ''; position: absolute; left: 0; top: 5px; bottom: 5px;
+  width: 3px; background: var(--accent); border-radius: 0 2px 2px 0;
+}
+.cat-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════
+   MAIN WRAPPER
+══════════════════════════════════════════ */
+.main-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── TOPBAR ── */
+.topbar {
+  height: 54px; background: var(--white);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 26px;
+  flex-shrink: 0; gap: 12px;
+}
+.search-wrap {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg); border: 1.5px solid var(--border);
+  border-radius: 9px; padding: 6px 14px; width: 300px;
+  transition: border-color 0.2s;
+}
+.search-wrap:focus-within { border-color: var(--accent); }
+.search-wrap input {
+  border: none; background: none; outline: none;
+  font-size: 13px; color: var(--text);
+  font-family: var(--font-body); width: 100%;
+}
+.search-wrap input::placeholder { color: var(--light); }
+
+.topbar-title {
+  font-family: var(--font-ui); font-size: 16px; font-weight: 700;
+  color: var(--text); letter-spacing: -0.3px; margin-left: auto;
+}
+
+/* ══════════════════════════════════════════
+   CONTENT AREA
+══════════════════════════════════════════ */
+.content-area { flex: 1; display: flex; overflow: hidden; }
+
+/* ── FEED ── */
+.feed-area { flex: 1; overflow-y: auto; padding: 28px 28px; }
+.feed-area::-webkit-scrollbar { width: 4px; }
+.feed-area::-webkit-scrollbar-track { background: transparent; }
+.feed-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.feed-title {
+  font-family: var(--font-ui); font-size: 26px; font-weight: 700;
+  letter-spacing: -0.5px; color: var(--text); margin-bottom: 5px;
+}
+.feed-subtitle {
+  font-size: 13.5px; color: var(--muted); line-height: 1.6;
+  margin-bottom: 22px; max-width: 520px;
+}
+
+/* 상단 가로 카테고리 탭 */
+.cat-tabs { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 22px; }
+.cat-tab {
+  font-family: var(--font-ui); font-size: 12.5px; font-weight: 500;
+  padding: 6px 15px; border-radius: 20px;
+  border: 1.5px solid var(--border); background: var(--white);
+  color: var(--muted); cursor: pointer;
+  transition: all 0.15s; user-select: none; white-space: nowrap;
+}
+.cat-tab:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+.cat-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+
+/* status */
+.feed-status {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11.5px; color: var(--light); margin-bottom: 16px;
+  font-family: var(--font-ui);
+}
+.status-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); flex-shrink: 0;
+  animation: blink 1.2s ease-in-out infinite;
+}
+.status-dot.idle  { background: var(--green); animation: none; }
+.status-dot.warn  { background: #F59E0B; animation: none; }
+.status-dot.error { background: #EF4444; animation: none; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ── NEWS CARD ── */
+.news-card {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 22px 24px; margin-bottom: 12px;
+  opacity: 0; animation: fadeUp 0.38s ease forwards;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+.news-card:hover { box-shadow: 0 2px 16px rgba(0,0,0,0.06); border-color: #D1D5DB; }
+@keyframes fadeUp {
+  from { opacity:0; transform: translateY(10px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.cat-badge {
+  font-family: var(--font-ui); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.4px; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 20px;
+  background: var(--accent-bg); color: var(--accent); border: 1px solid var(--accent-mid);
+}
+.cat-service  { background:#DBEAFE; color:#1D4ED8; border-color:#BFDBFE; }
+.cat-ux       { background:#FCE7F3; color:#9D174D; border-color:#FBCFE8; }
+.cat-future   { background:#EDE9FE; color:#5B21B6; border-color:#DDD6FE; }
+.cat-hands    { background:#D1FAE5; color:#065F46; border-color:#A7F3D0; }
+.cat-industry { background:#FEF3C7; color:#92400E; border-color:#FDE68A; }
+
+.card-meta {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11.5px; color: var(--light); font-family: var(--font-ui);
+}
+.card-title {
+  font-family: var(--font-ui); font-size: 17px; font-weight: 700;
+  line-height: 1.4; letter-spacing: -0.3px; color: var(--text); margin-bottom: 14px;
+}
+.summary-block { border-left: 3px solid var(--accent); padding-left: 13px; margin-bottom: 14px; }
+.summary-label { font-family: var(--font-ui); font-size: 11px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+.summary-text  { font-size: 13.5px; line-height: 1.7; color: var(--sub); white-space: pre-wrap; }
+
+.tag-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.tag-chip {
+  font-family: var(--font-ui); font-size: 11px; font-weight: 500;
+  padding: 3px 10px; border-radius: 20px;
+  background: var(--bg); color: var(--muted); border: 1px solid var(--border);
+  cursor: pointer; transition: all 0.15s; user-select: none;
+}
+.tag-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+.tag-chip.hl   { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); font-weight: 600; }
+
+.card-actions {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-top: 14px; border-top: 1px solid var(--border);
+}
+.card-actions-left { display: flex; align-items: center; gap: 14px; }
+.action-btn {
+  display: flex; align-items: center; gap: 5px;
+  font-family: var(--font-ui); font-size: 12px; font-weight: 500;
+  color: var(--muted); border: none; background: none;
+  cursor: pointer; padding: 0; transition: color 0.15s;
+}
+.action-btn:hover { color: var(--accent); }
+.read-link {
+  font-family: var(--font-ui); font-size: 12.5px; font-weight: 600;
+  color: var(--accent); text-decoration: none;
+  display: flex; align-items: center; gap: 4px; transition: opacity 0.15s;
+}
+.read-link:hover { opacity: 0.72; }
+
+/* 빈 상태 */
+.empty-state { text-align: center; padding: 72px 0; font-family: var(--font-ui); }
+.empty-icon  { font-size: 36px; margin-bottom: 14px; }
+.empty-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.empty-desc  { font-size: 13px; color: var(--muted); }
+
+.error-notice {
+  background: #FFFBEB; border: 1px solid #FDE68A;
+  border-radius: 10px; padding: 10px 16px;
+  font-size: 12px; color: #92400E;
+  margin-bottom: 16px; line-height: 1.65; font-family: var(--font-ui);
+}
+
+/* ══════════════════════════════════════════
+   RIGHT PANEL
+══════════════════════════════════════════ */
+.right-panel {
+  width: var(--right-w); border-left: 1px solid var(--border);
+  background: var(--white); overflow-y: auto;
+  flex-shrink: 0; padding: 24px 16px;
+}
+.right-panel::-webkit-scrollbar { width: 3px; }
+.right-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.panel-section { margin-bottom: 26px; }
+.panel-title {
+  font-family: var(--font-ui); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.9px; text-transform: uppercase;
+  color: var(--light); margin-bottom: 12px;
+}
+
+/* Sentiment */
+.sentiment-card {
+  background: var(--accent); border-radius: var(--radius);
+  padding: 16px; color: #fff;
+}
+.sent-label  { font-family: var(--font-ui); font-size: 9px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; opacity: 0.72; margin-bottom: 5px; }
+.sent-score  { font-family: var(--font-ui); font-size: 34px; font-weight: 700; line-height: 1; letter-spacing: -1.5px; }
+.sent-change { font-size: 12px; font-weight: 600; color: #6EE7B7; margin-left: 6px; }
+.sent-bar-wrap { background: rgba(255,255,255,.2); border-radius: 4px; height: 5px; margin-top: 12px; overflow: hidden; }
+.sent-bar { height: 100%; background: #fff; border-radius: 4px; width: 0; transition: width 1.2s ease; }
+
+/* Hot Topics */
+.hot-tag-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 11px; border-radius: 9px; cursor: pointer;
+  border: 1px solid transparent; transition: background 0.15s, border-color 0.15s;
+  margin-bottom: 3px; user-select: none;
+}
+.hot-tag-item:hover { background: var(--bg); }
+.hot-tag-item.selected { background: var(--accent-bg); border-color: var(--accent-mid); }
+.hot-tag-left { display: flex; align-items: center; gap: 6px; }
+.hot-hash { font-family: var(--font-ui); font-size: 12px; color: var(--light); font-weight: 500; }
+.hot-name { font-family: var(--font-ui); font-size: 12.5px; font-weight: 500; color: var(--text); }
+.hot-tag-item.selected .hot-name { color: var(--accent); font-weight: 600; }
+.hot-count {
+  font-family: var(--font-ui); font-size: 10.5px; font-weight: 600;
+  background: var(--bg); color: var(--muted);
+  padding: 1px 7px; border-radius: 10px; min-width: 24px; text-align: center;
+}
+.hot-tag-item.selected .hot-count { background: var(--accent-bg); color: var(--accent); }
+.tag-clear-btn {
+  font-family: var(--font-ui); font-size: 11.5px; font-weight: 500;
+  color: var(--accent); background: none; border: none;
+  cursor: pointer; padding: 7px 11px; border-radius: 8px;
+  width: 100%; text-align: left; margin-top: 4px; transition: background 0.15s;
+}
+.tag-clear-btn:hover { background: var(--accent-bg); }
+.hot-loading { font-size: 12px; color: var(--light); font-family: var(--font-ui); padding: 8px 2px; }
+
+/* AI Insight */
+.insight-card {
+  background: var(--bg); border-radius: var(--radius);
+  padding: 14px; border: 1px solid var(--border);
+}
+.insight-header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.insight-dot   { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.insight-label { font-family: var(--font-ui); font-size: 10px; font-weight: 700; color: var(--accent); }
+.insight-quote { font-size: 12.5px; line-height: 1.65; color: #374151; font-style: italic; margin-bottom: 11px; }
+.insight-author { display: flex; align-items: center; gap: 8px; }
+.insight-av {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: linear-gradient(135deg, #6366F1, #8B5CF6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; color: #fff; font-family: var(--font-ui); flex-shrink: 0;
+}
+.av-name { font-size: 11px; font-weight: 600; color: var(--text); font-family: var(--font-ui); }
+.av-role { font-size: 10px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- ══ LEFT SIDEBAR ══ -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 16 16" fill="none">
+        <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/>
+        <circle cx="8" cy="8" r="2" fill="#fff"/>
+      </svg>
+    </div>
+    <div>
+      <div class="logo-name">Refined AI</div>
+      <div class="logo-sub">Hybrid News Edition</div>
+    </div>
+  </div>
+
+  <!-- Latest Update 버튼 -->
+  <div class="update-btn-wrap">
+    <button class="update-btn" id="updateBtn" onclick="triggerUpdate()">
+      <div class="update-btn-top">
+        <div class="update-btn-label">
+          <div class="update-dot" id="updateDot"></div>
+          Latest Update
+        </div>
+        <div class="update-refresh-icon" id="refreshIconWrap">
+          <svg id="refreshIcon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7">
+            <path d="M13.5 2.5A6.5 6.5 0 1 1 7 1.5" stroke-linecap="round"/>
+            <path d="M13.5 2.5V6.5H9.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+      <span class="update-time-label">마지막 업데이트</span>
+      <span class="update-time-value" id="lastUpdatedTime">—</span>
+      <div class="update-status-msg" id="updateStatusMsg"></div>
+    </button>
+  </div>
+
+  <div class="sidebar-divider"></div>
+
+  <!-- 카테고리 필터 (사이드바) -->
+  <div class="sidebar-section-label">Category</div>
+  <div class="sidebar-cat-item active" data-cat="all">
+    <div class="cat-dot" style="background:#9CA3AF"></div> 전체
+  </div>
+  <div class="sidebar-cat-item" data-cat="AI Service &amp; Tools">
+    <div class="cat-dot" style="background:#3B82F6"></div> AI Service &amp; Tools
+  </div>
+  <div class="sidebar-cat-item" data-cat="UX/UI Insights">
+    <div class="cat-dot" style="background:#EC4899"></div> UX/UI Insights
+  </div>
+  <div class="sidebar-cat-item" data-cat="Future of Design">
+    <div class="cat-dot" style="background:#8B5CF6"></div> Future of Design
+  </div>
+  <div class="sidebar-cat-item" data-cat="Hands-on">
+    <div class="cat-dot" style="background:#10B981"></div> Hands-on
+  </div>
+  <div class="sidebar-cat-item" data-cat="Industry News">
+    <div class="cat-dot" style="background:#F59E0B"></div> Industry News
+  </div>
+</aside>
+
+<!-- ══ MAIN WRAPPER ══ -->
+<div class="main-wrapper">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="search-wrap">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="6.5" cy="6.5" r="5"/><path d="M10.5 10.5L14 14" stroke-linecap="round"/>
+      </svg>
+      <input type="text" placeholder="제목 또는 요약 내용으로 검색..." id="searchInput" oninput="applyFilters()">
+    </div>
+    <div class="topbar-title">AI News Refined</div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content-area">
+
+    <!-- FEED -->
+    <div class="feed-area">
+      <div class="feed-title">AI News Refined</div>
+      <div class="feed-subtitle">High-legibility summaries synthesized from across the web. Focus on the core insights without the noise.</div>
+
+      <!-- 상단 가로 카테고리 탭 -->
+      <div class="cat-tabs">
+        <div class="cat-tab active" data-cat="all">전체</div>
+        <div class="cat-tab" data-cat="AI Service &amp; Tools">AI Service &amp; Tools</div>
+        <div class="cat-tab" data-cat="UX/UI Insights">UX/UI Insights</div>
+        <div class="cat-tab" data-cat="Future of Design">Future of Design</div>
+        <div class="cat-tab" data-cat="Hands-on">Hands-on</div>
+        <div class="cat-tab" data-cat="Industry News">Industry News</div>
+      </div>
+
+      <div class="feed-status">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">로딩 중...</span>
+      </div>
+      <div id="notice"></div>
+      <div id="cardContainer"></div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <aside class="right-panel">
+
+      <div class="panel-section">
+        <div class="panel-title">Market Sentiment</div>
+        <div class="sentiment-card">
+          <div class="sent-label">Overall AI Momentum</div>
+          <div style="display:flex;align-items:baseline;">
+            <span class="sent-score">8.4</span>
+            <span class="sent-change">+12%</span>
+          </div>
+          <div class="sent-bar-wrap"><div class="sent-bar" id="sentBar"></div></div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-title">Hot Topics</div>
+        <div id="hotTopics"><div class="hot-loading">태그 분석 중...</div></div>
+        <button class="tag-clear-btn" id="tagClearBtn" style="display:none" onclick="clearTagFilter()">✕ 태그 필터 해제</button>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-title">AI Daily Insight</div>
+        <div class="insight-card">
+          <div class="insight-header">
+            <div class="insight-dot"></div>
+            <div class="insight-label">AI Daily Insight</div>
+          </div>
+          <div class="insight-quote">"The shift from pure LLM scaling to efficient architecture is the defining trend. Expect more 'small-but-mighty' models."</div>
+          <div class="insight-author">
+            <div class="insight-av">SO</div>
+            <div>
+              <div class="av-name">Dr. Sarah Chen</div>
+              <div class="av-role">AI Lead</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════
+   ✅ 설정 — 여기만 수정하세요
+══════════════════════════════════════════ */
+const SPREADSHEET_ID   = '1svPblrYOAz3AcJ4hrmA4MEzDYl_tpO0igS6wsWT6qRc';
+const MAKE_WEBHOOK_URL = 'YOUR_MAKE_WEBHOOK_URL_HERE'; // ← Make 웹훅 URL 입력
+
+const COL = { TITLE:0, DESC:1, DATE:2, LINK:3, CAT:4, TAGS:5 };
+
+/* ── 더미 데이터 (CORS Fallback) ── */
+const DUMMY = [
+  ['Figma AI 기능 대거 업데이트','Figma가 AI 기반 자동 레이아웃 조정, 콘텐츠 생성, 접근성 검사 기능을 대폭 강화했습니다.\n디자이너의 반복 작업을 줄이고 창의적 작업에 집중할 수 있도록 워크플로우가 개선되었습니다.','2024-06-01','https://figma.com','UX/UI Insights','Figma,디자인툴,AI디자인,UX'],
+  ['Claude API로 만드는 AI 글쓰기 어시스턴트','Anthropic Claude API를 활용해 실시간 글쓰기 피드백과 스타일 교정 기능을 구현하는 방법을 단계별로 소개합니다.\n초보자도 따라할 수 있도록 코드 예제와 함께 설명합니다.','2024-05-28','https://anthropic.com','Hands-on','Claude,API,글쓰기,튜토리얼,AI'],
+  ['2025 UX 트렌드: AI와 인간의 협업 설계','AI가 일상화된 시대, UX 디자이너의 역할은 어떻게 변화할까요?\n인간 중심 AI 인터페이스 설계 원칙과 실제 사례를 통해 미래 UX의 방향성을 탐색합니다.','2024-05-25','https://uxdesign.cc','Future of Design','UX트렌드,AI인터페이스,미래디자인,UX'],
+  ['Notion AI 2.0 출시 — 생산성 도구의 새 기준','Notion이 AI 기능을 전면 개편한 Notion AI 2.0을 출시했습니다.\n문서 요약, 자동 데이터베이스 생성, 맞춤형 워크플로우 제안 기능이 추가되어 팀 생산성을 한층 높였습니다.','2024-05-20','https://notion.so','AI Service & Tools','Notion,생산성,협업툴,AI'],
+  ['삼성 MX사업부, AI 디자인 시스템 공개','삼성전자 MX사업부가 자체 AI 기반 디자인 시스템 Galaxy Design을 외부에 공개했습니다.\n컴포넌트 자동 생성과 다크모드 최적화 기능이 핵심입니다.','2024-05-15','https://samsung.com','Industry News','삼성,디자인시스템,모바일UI,AI'],
+];
+
+/* ══════════════════════════════════════════
+   STATE
+══════════════════════════════════════════ */
+let allRows   = [];
+let activeCat = 'all';
+let activeTag = null;
+let lastUpdated = null;
+
+/* ══════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════ */
+function esc(s) {
+  return String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function formatDate(s) {
+  if (!s) return '';
+  const d = new Date(s);
+  if (isNaN(d)) return s;
+  const diff = (Date.now() - d) / 1000;
+  if (diff < 3600)    return `${Math.floor(diff/60)}분 전`;
+  if (diff < 86400)   return `${Math.floor(diff/3600)}시간 전`;
+  if (diff < 172800)  return '1일 전';
+  if (diff < 2592000) return `${Math.floor(diff/86400)}일 전`;
+  return d.toLocaleDateString('ko-KR',{month:'short',day:'numeric'});
+}
+function parseTags(s) {
+  return (s||'').split(',').map(t=>t.trim()).filter(Boolean);
+}
+function catBadgeClass(cat) {
+  const c = (cat||'').toLowerCase();
+  if (c.includes('service')||c.includes('tool')) return 'cat-service';
+  if (c.includes('ux')||c.includes('ui'))        return 'cat-ux';
+  if (c.includes('future'))                       return 'cat-future';
+  if (c.includes('hands'))                        return 'cat-hands';
+  if (c.includes('industry'))                     return 'cat-industry';
+  return '';
+}
+
+/* ══════════════════════════════════════════
+   마지막 업데이트 시간 표시
+══════════════════════════════════════════ */
+function setLastUpdatedTime(date) {
+  lastUpdated = date;
+  const el = document.getElementById('lastUpdatedTime');
+  if (!date) { el.textContent = '—'; return; }
+  el.textContent = date.toLocaleString('ko-KR', {
+    month: 'numeric', day: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+}
+
+/* ══════════════════════════════════════════
+   SKELETON
+══════════════════════════════════════════ */
+function showSkeleton() {
+  document.getElementById('cardContainer').innerHTML = Array.from({length:4}, () => `
+    <div class="sk-card">
+      <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+        <div class="skeleton sk-badge"></div>
+        <div class="skeleton" style="width:70px;height:11px;border-radius:6px"></div>
+      </div>
+      <div class="skeleton sk-title"></div>
+      <div style="border-left:3px solid #e5e7eb;padding-left:12px;margin-bottom:14px">
+        <div class="skeleton" style="height:10px;width:50px;border-radius:6px;margin-bottom:8px"></div>
+        <div class="skeleton sk-body"></div>
+        <div class="skeleton sk-body w80"></div>
+        <div class="skeleton sk-body w60"></div>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:16px">
+        <div class="skeleton" style="height:22px;width:58px;border-radius:20px"></div>
+        <div class="skeleton" style="height:22px;width:48px;border-radius:20px"></div>
+        <div class="skeleton" style="height:22px;width:68px;border-radius:20px"></div>
+      </div>
+      <div style="border-top:1px solid #e5e7eb;padding-top:12px;display:flex;justify-content:space-between">
+        <div class="skeleton" style="width:96px;height:11px;border-radius:6px"></div>
+        <div class="skeleton" style="width:110px;height:11px;border-radius:6px"></div>
+      </div>
+    </div>`).join('');
+}
+
+/* ══════════════════════════════════════════
+   CARD BUILDER
+══════════════════════════════════════════ */
+function buildCard(row, i) {
+  const title = row[COL.TITLE]||'제목 없음';
+  const desc  = row[COL.DESC] ||'';
+  const date  = row[COL.DATE] ||'';
+  const link  = row[COL.LINK] ||'#';
+  const cat   = row[COL.CAT]  ||'';
+  const tags  = parseTags(row[COL.TAGS]);
+
+  const tagChips = tags.length
+    ? `<div class="tag-chips">${tags.map(t =>
+        `<span class="tag-chip${activeTag===t?' hl':''}" onclick="selectTag('${esc(t)}')">#${esc(t)}</span>`
+      ).join('')}</div>`
+    : '';
+
+  return `
+  <div class="news-card" style="animation-delay:${i*55}ms">
+    <div class="card-header">
+      <span class="cat-badge ${catBadgeClass(cat)}">${esc(cat)||'General'}</span>
+      <div class="card-meta">
+        <span>AI Focus</span><span>·</span><span>${esc(formatDate(date))}</span>
+      </div>
+    </div>
+    <div class="card-title">${esc(title)}</div>
+    <div class="summary-block">
+      <div class="summary-label">Summary</div>
+      <div class="summary-text">${esc(desc)}</div>
+    </div>
+    ${tagChips}
+    <div class="card-actions">
+      <div class="card-actions-left">
+        <button class="action-btn">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2h10v13l-5-3-5 3z" stroke-linejoin="round"/></svg>
+          Save
+        </button>
+        <button class="action-btn">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="4" r="2"/><circle cx="4" cy="8" r="2"/><circle cx="12" cy="12" r="2"/><path d="M6 7l4-2M6 9l4 2" stroke-linecap="round"/></svg>
+          Share
+        </button>
+      </div>
+      <a class="read-link" href="${esc(link)}" target="_blank" rel="noopener">
+        Read Full Analysis
+        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h10M9 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </div>`;
+}
+
+/* ══════════════════════════════════════════
+   RENDER
+══════════════════════════════════════════ */
+function applyFilters() {
+  const q = (document.getElementById('searchInput').value||'').trim().toLowerCase();
+  let rows = allRows;
+  if (activeCat !== 'all') rows = rows.filter(r => (r[COL.CAT]||'').trim() === activeCat);
+  if (activeTag)           rows = rows.filter(r => parseTags(r[COL.TAGS]).includes(activeTag));
+  if (q) rows = rows.filter(r =>
+    (r[COL.TITLE]||'').toLowerCase().includes(q) ||
+    (r[COL.DESC] ||'').toLowerCase().includes(q)
+  );
+
+  const el = document.getElementById('cardContainer');
+  if (!rows.length) {
+    el.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <div class="empty-title">검색 결과가 없습니다</div>
+        <div class="empty-desc">${q ? `'${esc(q)}'에 해당하는 콘텐츠를 찾을 수 없어요.` : '선택한 조건에 해당하는 콘텐츠가 없어요.'}</div>
+      </div>`;
+    return;
+  }
+  el.innerHTML = rows.map((row, i) => buildCard(row, i)).join('');
+}
+
+/* ══════════════════════════════════════════
+   CATEGORY TABS (상단 + 사이드바 동기화)
+══════════════════════════════════════════ */
+function setCat(cat) {
+  activeCat = cat;
+  document.querySelectorAll('.cat-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.cat === cat);
+  });
+  document.querySelectorAll('.sidebar-cat-item').forEach(t => {
+    t.classList.toggle('active', t.dataset.cat === cat);
+  });
+  applyFilters();
+}
+
+document.querySelectorAll('.cat-tab, .sidebar-cat-item').forEach(el => {
+  el.addEventListener('click', () => setCat(el.dataset.cat));
+});
+
+/* ══════════════════════════════════════════
+   HOT TOPICS
+══════════════════════════════════════════ */
+function buildHotTopics() {
+  const freq = {};
+  allRows.forEach(r => parseTags(r[COL.TAGS]).forEach(t => { freq[t]=(freq[t]||0)+1; }));
+  const top5 = Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const el = document.getElementById('hotTopics');
+  if (!top5.length) { el.innerHTML='<div class="hot-loading">태그 없음</div>'; return; }
+  el.innerHTML = top5.map(([tag,cnt]) => `
+    <div class="hot-tag-item ${activeTag===tag?'selected':''}" onclick="selectTag('${esc(tag)}')">
+      <div class="hot-tag-left">
+        <span class="hot-hash">#</span>
+        <span class="hot-name">${esc(tag)}</span>
+      </div>
+      <span class="hot-count">${cnt}</span>
+    </div>`).join('');
+}
+
+function selectTag(tag) {
+  activeTag = (activeTag===tag) ? null : tag;
+  document.getElementById('tagClearBtn').style.display = activeTag ? 'block' : 'none';
+  buildHotTopics();
+  applyFilters();
+}
+function clearTagFilter() {
+  activeTag = null;
+  document.getElementById('tagClearBtn').style.display = 'none';
+  buildHotTopics();
+  applyFilters();
+}
+
+/* ══════════════════════════════════════════
+   STATUS
+══════════════════════════════════════════ */
+function setStatus(msg, state) {
+  document.getElementById('statusText').textContent = msg;
+  document.getElementById('statusDot').className = 'status-dot '+(state||'');
+}
+
+/* ══════════════════════════════════════════
+   CSV LOAD
+══════════════════════════════════════════ */
+async function loadCSV() {
+  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=0&t=${Date.now()}`;
+  const res = await fetch(url, { cache:'no-store' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const csv = await res.text();
+
+  return new Promise((resolve, reject) => {
+    Papa.parse(csv, {
+      skipEmptyLines: true,
+      complete(result) {
+        let rows = result.data;
+        if (rows.length > 0) {
+          const isHeader = rows[0].some(v =>
+            ['제목','title','요약','summary','카테고리','category','태그','tag','tags']
+              .includes((v||'').toLowerCase().trim())
+          );
+          if (isHeader) rows = rows.slice(1);
+        }
+        rows = rows.filter(r => r.some(v => v && v.trim()));
+        if (!rows.length) reject(new Error('시트에 데이터가 없습니다'));
+        else resolve(rows);
+      },
+      error(e) { reject(new Error('CSV 파싱 실패: '+e.message)); }
+    });
+  });
+}
+
+/* ══════════════════════════════════════════
+   🔄 TRIGGER UPDATE (Make Webhook + 재로드)
+══════════════════════════════════════════ */
+async function triggerUpdate() {
+  const btn = document.getElementById('updateBtn');
+  const dot = document.getElementById('updateDot');
+  const msg = document.getElementById('updateStatusMsg');
+
+  btn.disabled = true;
+  btn.classList.add('spinning');
+  dot.classList.add('loading');
+  msg.textContent = 'Make 시나리오 실행 중...';
+  setStatus('업데이트 중...', '');
+
+  // 1) Make 웹훅 호출
+  const webhookConfigured = MAKE_WEBHOOK_URL !== 'YOUR_MAKE_WEBHOOK_URL_HERE';
+  if (webhookConfigured) {
+    try {
+      await fetch(MAKE_WEBHOOK_URL, { method:'POST', mode:'no-cors' });
+      msg.textContent = '시나리오 실행 완료 · 시트 동기화 중...';
+      // Make 처리 대기 (보통 3~10초)
+      await new Promise(r => setTimeout(r, 5000));
+    } catch(e) {
+      msg.textContent = '웹훅 호출 실패 · 시트에서 직접 불러옵니다';
+    }
+  } else {
+    msg.textContent = '시트에서 최신 데이터 불러오는 중...';
+    await new Promise(r => setTimeout(r, 800));
+  }
+
+  // 2) 최신 CSV 재로드
+  try {
+    const rows = await loadCSV();
+    allRows = rows;
+    applyFilters();
+    buildHotTopics();
+    setLastUpdatedTime(new Date());
+    msg.textContent = `${rows.length}개 아티클 업데이트 완료 ✓`;
+    setStatus(`${rows.length}개 아티클 · 방금 업데이트`, 'idle');
+    dot.classList.remove('loading');
+    setTimeout(() => { msg.textContent = ''; }, 4000);
+  } catch(e) {
+    msg.textContent = '로드 실패: ' + e.message;
+    setStatus('업데이트 실패', 'error');
+    dot.classList.remove('loading');
+  }
+
+  btn.disabled = false;
+  btn.classList.remove('spinning');
+}
+
+/* ══════════════════════════════════════════
+   INIT
+══════════════════════════════════════════ */
+async function init() {
+  showSkeleton();
+  setStatus('데이터 불러오는 중...', '');
+
+  try {
+    const rows = await loadCSV();
+    allRows = rows;
+    applyFilters();
+    buildHotTopics();
+    setLastUpdatedTime(new Date());
+    document.getElementById('notice').innerHTML = '';
+    setStatus(`${rows.length}개 아티클 · 구글 시트 연동 완료 ✓`, 'idle');
+  } catch(e) {
+    allRows = DUMMY;
+    applyFilters();
+    buildHotTopics();
+    setLastUpdatedTime(new Date());
+    document.getElementById('notice').innerHTML =
+      `<div class="error-notice">⚠ 구글 시트 연결 실패 (${esc(e.message)}) — 미리보기 데이터를 표시합니다. GitHub Pages 배포 후 실제 데이터가 로드됩니다.</div>`;
+    setStatus(`미리보기 데이터 · ${DUMMY.length}개`, 'warn');
+  }
+
+  setTimeout(() => { document.getElementById('sentBar').style.width = '84%'; }, 400);
+}
+
+init();
+</script>
+</body>
+</html>
