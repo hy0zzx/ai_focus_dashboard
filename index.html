@@ -676,6 +676,10 @@ function render() {
     (r[COL.DESC] ||'').toLowerCase().includes(q)
   );
 
+  // 작성일(C열) 기준 최신순 정렬
+  filtered = [...filtered].sort((a, b) => new Date(b[COL.DATE]||0) - new Date(a[COL.DATE]||0));
+
+
   const el = document.getElementById('cards');
   if (!filtered.length) {
     el.innerHTML=`<div class="empty">
